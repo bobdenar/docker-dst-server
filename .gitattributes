@@ -1,0 +1,5 @@
+* text=auto eol=lf
+
+*.sh text eol=lf
+scripts_system/* text eol=lf
+scripts_steam/* text eol=lf
