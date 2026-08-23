@@ -39,6 +39,45 @@ DST Standard
 DST Island of Adventure
 [docker-compose](https://github.com/tws101/docker-dst-server/blob/develop-island/docker-compose.yml)
 
+### Environment variables
+
+When deploying with Portainer (Stacks > your stack > Environment variables), or via `docker compose` with a `.env` file, set:
+
+ * `PATH_ON_HOST`: path on the Docker host (or NAS share) that holds your server config, e.g. `/path/to/your/dst-data`.
+ * `DST_SERVER_ARCH`: `amd64` (default) or `x86`, selects the server binary architecture.
+ * `DST_CLUSTER_TOKEN`: your cluster token (see below), written to `cluster_token.txt` on every container start.
+
+All variables below override `cluster.ini` on every container start (only once `cluster.ini` exists, i.e. after the first launch). `DST_CLUSTER_NAME`, `DST_CLUSTER_DESCRIPTION` and `DST_CLUSTER_PASSWORD` have no default: leave them unset to edit `cluster.ini` by hand instead. Every other variable always applies and falls back to the default shown below if unset.
+
+ * `DST_CLUSTER_NAME`: `cluster_name`, no default.
+ * `DST_CLUSTER_DESCRIPTION`: `cluster_description`, no default.
+ * `DST_CLUSTER_PASSWORD`: `cluster_password`, no default.
+ * `DST_OFFLINE_CLUSTER`: `offline_cluster`, default `false`.
+ * `DST_LAN_ONLY_CLUSTER`: `lan_only_cluster`, default `false`.
+ * `DST_WHITELIST_SLOTS`: `whitelist_slots`, default `1`.
+ * `DST_CLUSTER_INTENTION`: `cluster_intention`, default `social`.
+ * `DST_AUTOSAVER_ENABLED`: `autosaver_enabled`, default `true`.
+ * `DST_GAME_MODE`: `game_mode`, default `endless`.
+ * `DST_MAX_PLAYERS`: `max_players`, default `10`.
+ * `DST_PVP`: `pvp`, default `false`.
+ * `DST_PAUSE_WHEN_EMPTY`: `pause_when_empty`, default `true`.
+ * `DST_VOTE_KICK_ENABLED`: `vote_kick_enabled`, default `false`.
+ * `DST_STEAM_GROUP_ONLY`: `steam_group_only`, default `false`.
+ * `DST_STEAM_GROUP_ID`: `steam_group_id`, default `0`.
+ * `DST_STEAM_GROUP_ADMINS`: `steam_group_admins`, default `false`.
+ * `DST_CONSOLE_ENABLED`: `console_enabled`, default `true`.
+ * `DST_MAX_SNAPSHOTS`: `max_snapshots`, default `6`.
+
+### Mods
+
+Mods can be injected from environment variables instead of editing `dedicated_server_mods_setup.lua`/`modoverrides.lua` by hand. If set, these are re-applied on every container start, but the merge is non-destructive: a mod's `configuration_options` (whether set in-game or by hand) are preserved across restarts, new mods are added, and mods removed from the env vars are disabled rather than deleted (so their config survives if you re-add them later).
+
+ * `DST_MOD_IDS`: comma-separated Steam Workshop ids to track, e.g. `2798599672,1378549454,378160973`. Leave unset to manage mods entirely by hand (nothing is touched in that case).
+ * `DST_MOD_IDS_MASTER`: comma-separated subset of `DST_MOD_IDS` to enable on the Master shard. Defaults to all of `DST_MOD_IDS`.
+ * `DST_MOD_IDS_CAVES`: comma-separated subset of `DST_MOD_IDS` to enable on the Caves shard. Defaults to all of `DST_MOD_IDS`.
+
+A newly added mod starts with empty `configuration_options` (its defaults); use the in-game mod config menu, or edit `modoverrides.lua` by hand, to tune it afterwards — your changes will stick.
+
 ### Stop server
 
 A docker stop command, whether at the command line or in Dockge or Portainer will properly shut the server down.
