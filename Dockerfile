@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=debian:buster-slim
+ARG BASE_IMAGE=debian:13-slim
 FROM $BASE_IMAGE
 LABEL maintainer="Tyler Shield <tylershield@gmail.com>"
 
@@ -18,8 +18,21 @@ RUN dpkg --add-architecture i386 \
     && apt-get install -y locales \
     && sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen \
     && locale-gen \
-    && apt-get install -y --no-install-recommends ca-certificates lib32stdc++6 libcurl3-gnutls:i386 libcurl3-gnutls wget tar supervisor \
-    && (apt-get install -y --no-install-recommends lib32gcc-s1 || apt-get install -y --no-install-recommends lib32gcc1) \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        wget \
+        tar \
+        supervisor \
+        lua5.4 \
+        lib32stdc++6 \
+        lib32gcc-s1 \
+        libcurl4-gnutls-dev \
+        libcurl4-gnutls-dev:i386 \
+        libhogweed6t64 \
+        libnettle8t64 \
+        libtasn1-6 \
+        libtinfo6 \
+        libsqlite3-0 \
     && apt-get autoremove -y \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
