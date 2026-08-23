@@ -1,0 +1,99 @@
+#!/usr/bin/env lua5.4
+-- Merges a shard's modoverrides.lua with the mod list coming from environment
+-- variables, without discarding configuration_options set from the in-game
+-- mod config menu.
+--
+-- usage: merge_modoverrides <file> <all_ids_csv> <enabled_ids_csv>
+--   <file>             path to the shard's modoverrides.lua
+--   <all_ids_csv>      DST_MOD_IDS: every workshop id that should be tracked
+--   <enabled_ids_csv>  DST_MOD_IDS_MASTER or DST_MOD_IDS_CAVES: the subset
+--                       of <all_ids_csv> that should be enabled on this shard
+--
+-- behaviour:
+--   * a mod present in <all_ids_csv> but missing from the file is added,
+--     enabled according to <enabled_ids_csv>, with empty configuration_options
+--   * a mod already present in the file keeps its configuration_options as-is
+--   * a mod no longer present in <all_ids_csv> is kept in the file but set to
+--     enabled=false (never deleted, so its configuration_options survive a
+--     later re-add)
+
+local file, all_ids_csv, enabled_ids_csv = arg[1], arg[2] or "", arg[3] or ""
+
+local function split_csv(s)
+    local t = {}
+    for id in s:gmatch("[^,]+") do
+        id = id:match("^%s*(.-)%s*$")
+        if id ~= "" then table.insert(t, id) end
+    end
+    return t
+end
+
+local enabled_set = {}
+for _, id in ipairs(split_csv(enabled_ids_csv)) do
+    enabled_set[id] = true
+end
+
+-- load the existing file, if any/valid; anything unreadable is treated as empty
+local existing = {}
+local chunk = loadfile(file)
+if chunk then
+    local ok, result = pcall(chunk)
+    if ok and type(result) == "table" then
+        existing = result
+    end
+end
+
+-- union of ids: everything from DST_MOD_IDS, plus anything already on disk
+local seen, ordered_ids = {}, {}
+for _, id in ipairs(split_csv(all_ids_csv)) do
+    if not seen[id] then
+        seen[id] = true
+        table.insert(ordered_ids, id)
+    end
+end
+for key in pairs(existing) do
+    local id = key:match("^workshop%-(.+)$")
+    if id and not seen[id] then
+        seen[id] = true
+        table.insert(ordered_ids, id)
+    end
+end
+table.sort(ordered_ids)
+
+local function serialize(v, indent)
+    local t = type(v)
+    if t == "table" then
+        local parts = {}
+        for k, val in pairs(v) do
+            local key
+            if type(k) == "string" then
+                key = string.format("[%q]", k)
+            else
+                key = "[" .. tostring(k) .. "]"
+            end
+            table.insert(parts, indent .. "  " .. key .. "=" .. serialize(val, indent .. "  "))
+        end
+        if #parts == 0 then return "{ }" end
+        return "{\n" .. table.concat(parts, ",\n") .. "\n" .. indent .. "}"
+    elseif t == "string" then
+        return string.format("%q", v)
+    elseif t == "boolean" or t == "number" then
+        return tostring(v)
+    else
+        return "nil"
+    end
+end
+
+local out = assert(io.open(file, "w"))
+out:write("-- managed by entrypoint.sh from DST_MOD_IDS / DST_MOD_IDS_MASTER / DST_MOD_IDS_CAVES\n")
+out:write("-- configuration_options are preserved across restarts; edit them in-game or here directly\n")
+out:write("return {\n")
+for _, id in ipairs(ordered_ids) do
+    local key = "workshop-" .. id
+    local prev = existing[key]
+    local cfg = (prev and prev.configuration_options) or {}
+    local enabled = enabled_set[id] or false
+    out:write("  [" .. string.format("%q", key) .. "]={ configuration_options=" .. serialize(cfg, "  ") .. ", enabled=" .. tostring(enabled) .. " },\n")
+end
+out:write("}\n")
+out:close()

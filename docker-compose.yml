@@ -4,13 +4,40 @@ networks:
 services:
   dst-server-island:
      container_name: dst-server-island
-     image: tws101/docker-dst-server:island-latest
+     build: .
+     image: docker-dst-server:island-trixie
      restart: "on-failure:5"
      networks:
       - dst-island
      ports:
         - "11001-11004:11001-11004/udp"
         - "12546-12549:12546-12549/udp"
+     environment:
+        DST_SERVER_ARCH: ${DST_SERVER_ARCH:-amd64}
+        DST_CLUSTER_TOKEN: ${DST_CLUSTER_TOKEN}
+        DST_CLUSTER_NAME: ${DST_CLUSTER_NAME}
+        DST_CLUSTER_DESCRIPTION: ${DST_CLUSTER_DESCRIPTION}
+        DST_CLUSTER_PASSWORD: ${DST_CLUSTER_PASSWORD}
+        DST_OFFLINE_CLUSTER: ${DST_OFFLINE_CLUSTER:-false}
+        DST_LAN_ONLY_CLUSTER: ${DST_LAN_ONLY_CLUSTER:-false}
+        DST_WHITELIST_SLOTS: ${DST_WHITELIST_SLOTS:-1}
+        DST_CLUSTER_INTENTION: ${DST_CLUSTER_INTENTION:-social}
+        DST_AUTOSAVER_ENABLED: ${DST_AUTOSAVER_ENABLED:-true}
+        DST_GAME_MODE: ${DST_GAME_MODE:-survival}
+        DST_MAX_PLAYERS: ${DST_MAX_PLAYERS:-64}
+        DST_PVP: ${DST_PVP:-false}
+        DST_PAUSE_WHEN_EMPTY: ${DST_PAUSE_WHEN_EMPTY:-true}
+        DST_VOTE_KICK_ENABLED: ${DST_VOTE_KICK_ENABLED:-false}
+        DST_STEAM_GROUP_ONLY: ${DST_STEAM_GROUP_ONLY:-false}
+        DST_STEAM_GROUP_ID: ${DST_STEAM_GROUP_ID:-0}
+        DST_STEAM_GROUP_ADMINS: ${DST_STEAM_GROUP_ADMINS:-false}
+        DST_CONSOLE_ENABLED: ${DST_CONSOLE_ENABLED:-true}
+        DST_MAX_SNAPSHOTS: ${DST_MAX_SNAPSHOTS:-6}
+        DST_MOD_IDS: ${DST_MOD_IDS}
+        DST_MOD_IDS_MASTER: ${DST_MOD_IDS_MASTER}
+        DST_MOD_IDS_CAVES: ${DST_MOD_IDS_CAVES}
+        DST_MOD_IDS_ISLAND: ${DST_MOD_IDS_ISLAND}
+        DST_MOD_IDS_VOLCANO: ${DST_MOD_IDS_VOLCANO}
      volumes:
         - ${PATH_ON_HOST}:/data
      stop_grace_period: 6m
