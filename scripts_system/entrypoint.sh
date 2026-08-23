@@ -4,6 +4,10 @@ set -Eeuo pipefail
 DIR_MODS_SYS="/opt/dst_server/mods"
 DIR_MODS_USER="${DST_USER_DATA_PATH}/DoNotStarveTogether/Cluster_1/mods"
 FILE_CLUSTER_TOKEN="${DST_USER_DATA_PATH}/DoNotStarveTogether/Cluster_1/cluster_token.txt"
+FILE_CLUSTER_INI="${DST_USER_DATA_PATH}/DoNotStarveTogether/Cluster_1/cluster.ini"
+FILE_MODS_SETUP="${DIR_MODS_USER}/dedicated_server_mods_setup.lua"
+FILE_MODOVERRIDES_MASTER="${DST_USER_DATA_PATH}/DoNotStarveTogether/Cluster_1/Master/modoverrides.lua"
+FILE_MODOVERRIDES_CAVES="${DST_USER_DATA_PATH}/DoNotStarveTogether/Cluster_1/Caves/modoverrides.lua"
 
 # set -e error handler.
 on_error() {
@@ -25,6 +29,47 @@ if [ "$1" == "dontstarve_dedicated_server_nullrenderer" ] || [ "$1" == "supervis
     if [ -n "${DST_CLUSTER_TOKEN:-}" ]; then
 	echo "Filling cluster token from environment variable"
 	printf "%s" "${DST_CLUSTER_TOKEN}" > "${FILE_CLUSTER_TOKEN}"
+    fi
+
+    # apply cluster.ini settings from environment variables
+    if [ -f "${FILE_CLUSTER_INI}" ]; then
+	# name, description and password have no default: only touched if explicitly set
+	set_cluster_ini_optional() {
+	    local key="$1" value="$2"
+	    if [ -n "${value}" ]; then
+		sed -i "s/^${key} =.*/${key} = ${value}/" "${FILE_CLUSTER_INI}"
+	    fi
+	}
+	# every other setting always applies, falling back to its default value
+	set_cluster_ini() {
+	    local key="$1" value="$2"
+	    sed -i "s/^${key} =.*/${key} = ${value}/" "${FILE_CLUSTER_INI}"
+	}
+
+	echo "Applying cluster.ini settings from environment variables"
+
+	set_cluster_ini_optional "cluster_name" "${DST_CLUSTER_NAME:-}"
+	set_cluster_ini_optional "cluster_description" "${DST_CLUSTER_DESCRIPTION:-}"
+	set_cluster_ini_optional "cluster_password" "${DST_CLUSTER_PASSWORD:-}"
+
+	set_cluster_ini "offline_cluster" "${DST_OFFLINE_CLUSTER:-false}"
+	set_cluster_ini "lan_only_cluster" "${DST_LAN_ONLY_CLUSTER:-false}"
+	set_cluster_ini "whitelist_slots" "${DST_WHITELIST_SLOTS:-1}"
+	set_cluster_ini "cluster_intention" "${DST_CLUSTER_INTENTION:-social}"
+	set_cluster_ini "autosaver_enabled" "${DST_AUTOSAVER_ENABLED:-true}"
+
+	set_cluster_ini "game_mode" "${DST_GAME_MODE:-endless}"
+	set_cluster_ini "max_players" "${DST_MAX_PLAYERS:-10}"
+	set_cluster_ini "pvp" "${DST_PVP:-false}"
+	set_cluster_ini "pause_when_empty" "${DST_PAUSE_WHEN_EMPTY:-true}"
+	set_cluster_ini "vote_kick_enabled" "${DST_VOTE_KICK_ENABLED:-false}"
+
+	set_cluster_ini "steam_group_only" "${DST_STEAM_GROUP_ONLY:-false}"
+	set_cluster_ini "steam_group_id" "${DST_STEAM_GROUP_ID:-0}"
+	set_cluster_ini "steam_group_admins" "${DST_STEAM_GROUP_ADMINS:-false}"
+
+	set_cluster_ini "console_enabled" "${DST_CONSOLE_ENABLED:-true}"
+	set_cluster_ini "max_snapshots" "${DST_MAX_SNAPSHOTS:-6}"
     fi
 
     # check cluster token file format
@@ -60,6 +105,36 @@ if [ "$1" == "dontstarve_dedicated_server_nullrenderer" ] || [ "$1" == "supervis
         echo "Creating default mod config..."
         mkdir -p "${DST_USER_DATA_PATH}/DoNotStarveTogether/Cluster_1"
         cp -r "${DIR_MODS_SYS}" "${DIR_MODS_USER}"
+    fi
+
+    # inject mods from environment variables
+    if [ -n "${DST_MOD_IDS:-}" ]; then
+	echo "Applying mod list from environment variables"
+
+	# writes the list of workshop ids to download to dedicated_server_mods_setup.lua
+	generate_mods_setup() {
+	    local file="$1"
+	    shift
+	    {
+		echo "-- generated from DST_MOD_IDS by entrypoint.sh, do not edit by hand"
+		for id in "$@"; do
+		    echo "ServerModSetup(\"${id}\")"
+		done
+	    } > "${file}"
+	}
+
+	IFS=',' read -ra mod_ids_raw <<< "${DST_MOD_IDS}"
+	mod_ids=()
+	for id in "${mod_ids_raw[@]}"; do
+	    mod_ids+=("$(echo "${id}" | xargs)")
+	done
+
+	generate_mods_setup "${FILE_MODS_SETUP}" "${mod_ids[@]}"
+
+	# merge (add-if-missing, preserve configuration_options, disable-if-removed)
+	# instead of a blind regeneration, so in-game mod config survives restarts
+	merge_modoverrides "${FILE_MODOVERRIDES_MASTER}" "${DST_MOD_IDS}" "${DST_MOD_IDS_MASTER:-${DST_MOD_IDS}}"
+	merge_modoverrides "${FILE_MODOVERRIDES_CAVES}" "${DST_MOD_IDS}" "${DST_MOD_IDS_CAVES:-${DST_MOD_IDS}}"
     fi
 
     # override server mods folder with the user provided one
