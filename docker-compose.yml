@@ -1,14 +1,10 @@
-networks:
-  dst-island:
-    name: dst-island
 services:
   dst-server-island:
      container_name: dst-server-island
      build: .
      image: docker-dst-server:island-trixie
      restart: "on-failure:5"
-     networks:
-      - dst-island
+     network_mode: bridge
      ports:
         - "11001-11004:11001-11004/udp"
         - "12546-12549:12546-12549/udp"
