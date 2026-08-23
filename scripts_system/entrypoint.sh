@@ -1,6 +1,15 @@
 #!/bin/bash
 set -Eeuo pipefail
 
+# Mods this cluster's 4-shard (Forest/Cave/Island/Volcano) setup structurally depends
+# on: Island Adventures ports the Shipwrecked/Volcano content the Island and Volcano
+# shards generate their worlds from, IA Core is a separate mod Island Adventures
+# requires to run (without it its modmain.lua errors out with "variable ... is not
+# declared" and the shard process crashes), and Gem Core is required by other mods
+# that import it. These are always installed and enabled on every shard; DST_MOD_IDS /
+# DST_MOD_IDS_* from the environment only add extra mods on top, they never remove these.
+CORE_MOD_IDS="1378549454,1467214795,3435352667"
+
 DIR_MODS_SYS="/opt/dst_server/mods"
 DIR_MODS_USER="${DST_USER_DATA_PATH}/DoNotStarveTogether/Cluster_IA/mods"
 FILE_CLUSTER_TOKEN="${DST_USER_DATA_PATH}/DoNotStarveTogether/Cluster_IA/cluster_token.txt"
@@ -109,8 +118,10 @@ if [ "$1" == "dontstarve_dedicated_server_nullrenderer" ] || [ "$1" == "supervis
         cp -r "${DIR_MODS_SYS}" "${DIR_MODS_USER}"
     fi
 
-    # inject mods from environment variables
-    if [ -n "${DST_MOD_IDS:-}" ]; then
+    # inject mods: CORE_MOD_IDS (always present) plus whatever DST_MOD_IDS adds from
+    # the environment
+    {
+	all_mod_ids="${CORE_MOD_IDS}${DST_MOD_IDS:+,${DST_MOD_IDS}}"
 	echo "Applying mod list from environment variables"
 
 	# writes the list of workshop ids to download to dedicated_server_mods_setup.lua
@@ -125,7 +136,7 @@ if [ "$1" == "dontstarve_dedicated_server_nullrenderer" ] || [ "$1" == "supervis
 	    } > "${file}"
 	}
 
-	IFS=',' read -ra mod_ids_raw <<< "${DST_MOD_IDS}"
+	IFS=',' read -ra mod_ids_raw <<< "${all_mod_ids}"
 	mod_ids=()
 	for id in "${mod_ids_raw[@]}"; do
 	    mod_ids+=("$(echo "${id}" | xargs)")
@@ -133,13 +144,20 @@ if [ "$1" == "dontstarve_dedicated_server_nullrenderer" ] || [ "$1" == "supervis
 
 	generate_mods_setup "${FILE_MODS_SETUP}" "${mod_ids[@]}"
 
+	# each shard's enabled set is CORE_MOD_IDS plus its own override
+	# (DST_MOD_IDS_<SHARD>), falling back to the shared DST_MOD_IDS
+	enabled_master="${CORE_MOD_IDS},${DST_MOD_IDS_MASTER:-${DST_MOD_IDS:-}}"
+	enabled_caves="${CORE_MOD_IDS},${DST_MOD_IDS_CAVES:-${DST_MOD_IDS:-}}"
+	enabled_island="${CORE_MOD_IDS},${DST_MOD_IDS_ISLAND:-${DST_MOD_IDS:-}}"
+	enabled_volcano="${CORE_MOD_IDS},${DST_MOD_IDS_VOLCANO:-${DST_MOD_IDS:-}}"
+
 	# merge (add-if-missing, preserve configuration_options, disable-if-removed)
 	# instead of a blind regeneration, so in-game mod config survives restarts
-	merge_modoverrides "${FILE_MODOVERRIDES_MASTER}" "${DST_MOD_IDS}" "${DST_MOD_IDS_MASTER:-${DST_MOD_IDS}}"
-	merge_modoverrides "${FILE_MODOVERRIDES_CAVES}" "${DST_MOD_IDS}" "${DST_MOD_IDS_CAVES:-${DST_MOD_IDS}}"
-	merge_modoverrides "${FILE_MODOVERRIDES_ISLAND}" "${DST_MOD_IDS}" "${DST_MOD_IDS_ISLAND:-${DST_MOD_IDS}}"
-	merge_modoverrides "${FILE_MODOVERRIDES_VOLCANO}" "${DST_MOD_IDS}" "${DST_MOD_IDS_VOLCANO:-${DST_MOD_IDS}}"
-    fi
+	merge_modoverrides "${FILE_MODOVERRIDES_MASTER}" "${all_mod_ids}" "${enabled_master}"
+	merge_modoverrides "${FILE_MODOVERRIDES_CAVES}" "${all_mod_ids}" "${enabled_caves}"
+	merge_modoverrides "${FILE_MODOVERRIDES_ISLAND}" "${all_mod_ids}" "${enabled_island}"
+	merge_modoverrides "${FILE_MODOVERRIDES_VOLCANO}" "${all_mod_ids}" "${enabled_volcano}"
+    }
 
     # override server mods folder with the user provided one
     rm -rf "${DIR_MODS_SYS}"
