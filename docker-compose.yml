@@ -36,4 +36,4 @@ services:
         DST_MOD_IDS_VOLCANO: ${DST_MOD_IDS_VOLCANO}
      volumes:
         - ${PATH_ON_HOST}:/data
-     stop_grace_period: 6m
+     stop_grace_period: 13m

@@ -9,7 +9,7 @@ return {
 	desc="The top of the tropical volcano",
 	hideminimap=false,
 	id="SURVIVAL_VOLCANO_CLASSIC",
-	location="forest",
+	location="volcanoworld",
 	max_playlist_position=999,
 	min_playlist_position=0,
 	name="Volcano",
@@ -124,7 +124,7 @@ return {
 	
 	-- WORLD
 	task_set="volcano",						-- Biomes: 						DO NOT CHANGE OR YOU DIE
-	start_location="VolcanoPortal",			-- Spawn Area:					DO NOT CHANGE OR YOU DIE 
+	start_location="volcano_default",			-- Spawn Area:					DO NOT CHANGE OR YOU DIE
 	world_size="small",						-- World Size:					"small", "medium", "default", "huge"
 	branching="default",					-- Branches: 					"never", "least", "default", "most", "random"
 	loop="default",							-- Loops:						DO NOT CHANGE OR YOU DIE

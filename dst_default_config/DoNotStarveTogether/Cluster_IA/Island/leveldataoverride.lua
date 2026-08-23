@@ -9,7 +9,7 @@ return {
 	desc="A tropical paradise?",
 	hideminimap=false,
 	id="SURVIVAL_SHIPWRECKED_CLASSIC",
-	location="forest",
+	location="shipwrecked",
 	max_playlist_position=999,
 	min_playlist_position=0,
 	name="Shipwrecked",
@@ -196,7 +196,7 @@ return {
 	
 	-- WORLD
 	task_set="shipwrecked",					-- Biomes: 						(DO NOT CHANGE OR YOU DIE)
-	start_location="ShipwreckedStart",		-- Spawn Area: 					(DO NOT CHANGE OR YOU DIE)
+	start_location="shipwrecked_default",	-- Spawn Area: 					(DO NOT CHANGE OR YOU DIE)
 	world_size="default",					-- World Size:					"small", "medium", "default", "huge"
 	branching="default",					-- Branches: 					"never", "least", "default", "most", "random"
 	loop="never",							-- Loops:						(DO NOT CHANGE OR YOU DIE)

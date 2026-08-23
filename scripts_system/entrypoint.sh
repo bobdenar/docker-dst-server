@@ -2,13 +2,17 @@
 set -Eeuo pipefail
 
 # Mods this cluster's 4-shard (Forest/Cave/Island/Volcano) setup structurally depends
-# on: Island Adventures ports the Shipwrecked/Volcano content the Island and Volcano
-# shards generate their worlds from, IA Core is a separate mod Island Adventures
-# requires to run (without it its modmain.lua errors out with "variable ... is not
-# declared" and the shard process crashes), and Gem Core is required by other mods
-# that import it. These are always installed and enabled on every shard; DST_MOD_IDS /
-# DST_MOD_IDS_* from the environment only add extra mods on top, they never remove these.
-CORE_MOD_IDS="1378549454,1467214795,3435352667"
+# on. Gem Core is required by other mods that import it, so it's always installed and
+# enabled on every shard. Island Adventures ports the Shipwrecked/Volcano content the
+# Island and Volcano shards generate their worlds from, and needs its separate IA Core
+# dependency to even load (without it, its modmain.lua errors out with "variable ...
+# is not declared" and the shard process crashes) -- but IA Core's forest_map.lua
+# override breaks worldgen on a plain (non-Island/Volcano) map with "attempt to index
+# local 'start_loc' (a nil value)", so both must stay enabled ONLY on Island/Volcano,
+# never on Master/Caves. DST_MOD_IDS / DST_MOD_IDS_* from the environment only add
+# extra mods on top of all this, they never remove it.
+CORE_MOD_IDS_ALL_SHARDS="1378549454"
+CORE_MOD_IDS_ISLAND_VOLCANO="1467214795,3435352667"
 
 DIR_MODS_SYS="/opt/dst_server/mods"
 DIR_MODS_USER="${DST_USER_DATA_PATH}/DoNotStarveTogether/Cluster_IA/mods"
@@ -118,10 +122,10 @@ if [ "$1" == "dontstarve_dedicated_server_nullrenderer" ] || [ "$1" == "supervis
         cp -r "${DIR_MODS_SYS}" "${DIR_MODS_USER}"
     fi
 
-    # inject mods: CORE_MOD_IDS (always present) plus whatever DST_MOD_IDS adds from
-    # the environment
+    # inject mods: CORE_MOD_IDS_ALL_SHARDS + CORE_MOD_IDS_ISLAND_VOLCANO (always
+    # present) plus whatever DST_MOD_IDS adds from the environment
     {
-	all_mod_ids="${CORE_MOD_IDS}${DST_MOD_IDS:+,${DST_MOD_IDS}}"
+	all_mod_ids="${CORE_MOD_IDS_ALL_SHARDS},${CORE_MOD_IDS_ISLAND_VOLCANO}${DST_MOD_IDS:+,${DST_MOD_IDS}}"
 	echo "Applying mod list from environment variables"
 
 	# writes the list of workshop ids to download to dedicated_server_mods_setup.lua
@@ -144,12 +148,13 @@ if [ "$1" == "dontstarve_dedicated_server_nullrenderer" ] || [ "$1" == "supervis
 
 	generate_mods_setup "${FILE_MODS_SETUP}" "${mod_ids[@]}"
 
-	# each shard's enabled set is CORE_MOD_IDS plus its own override
-	# (DST_MOD_IDS_<SHARD>), falling back to the shared DST_MOD_IDS
-	enabled_master="${CORE_MOD_IDS},${DST_MOD_IDS_MASTER:-${DST_MOD_IDS:-}}"
-	enabled_caves="${CORE_MOD_IDS},${DST_MOD_IDS_CAVES:-${DST_MOD_IDS:-}}"
-	enabled_island="${CORE_MOD_IDS},${DST_MOD_IDS_ISLAND:-${DST_MOD_IDS:-}}"
-	enabled_volcano="${CORE_MOD_IDS},${DST_MOD_IDS_VOLCANO:-${DST_MOD_IDS:-}}"
+	# each shard's enabled set is CORE_MOD_IDS_ALL_SHARDS (+ CORE_MOD_IDS_ISLAND_VOLCANO
+	# on Island/Volcano only) plus its own override (DST_MOD_IDS_<SHARD>), falling back
+	# to the shared DST_MOD_IDS
+	enabled_master="${CORE_MOD_IDS_ALL_SHARDS},${DST_MOD_IDS_MASTER:-${DST_MOD_IDS:-}}"
+	enabled_caves="${CORE_MOD_IDS_ALL_SHARDS},${DST_MOD_IDS_CAVES:-${DST_MOD_IDS:-}}"
+	enabled_island="${CORE_MOD_IDS_ALL_SHARDS},${CORE_MOD_IDS_ISLAND_VOLCANO},${DST_MOD_IDS_ISLAND:-${DST_MOD_IDS:-}}"
+	enabled_volcano="${CORE_MOD_IDS_ALL_SHARDS},${CORE_MOD_IDS_ISLAND_VOLCANO},${DST_MOD_IDS_VOLCANO:-${DST_MOD_IDS:-}}"
 
 	# merge (add-if-missing, preserve configuration_options, disable-if-removed)
 	# instead of a blind regeneration, so in-game mod config survives restarts

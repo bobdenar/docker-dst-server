@@ -75,8 +75,12 @@ Mods can be injected from environment variables instead of editing `dedicated_se
  * `DST_MOD_IDS`: comma-separated Steam Workshop ids to track, e.g. `2798599672,1378549454,378160973`. Leave unset to manage mods entirely by hand (nothing is touched in that case).
  * `DST_MOD_IDS_MASTER`: comma-separated subset of `DST_MOD_IDS` to enable on the Master shard. Defaults to all of `DST_MOD_IDS`.
  * `DST_MOD_IDS_CAVES`: comma-separated subset of `DST_MOD_IDS` to enable on the Caves shard. Defaults to all of `DST_MOD_IDS`.
+ * `DST_MOD_IDS_ISLAND`: comma-separated subset of `DST_MOD_IDS` to enable on the Island shard. Defaults to all of `DST_MOD_IDS`.
+ * `DST_MOD_IDS_VOLCANO`: comma-separated subset of `DST_MOD_IDS` to enable on the Volcano shard. Defaults to all of `DST_MOD_IDS`.
 
 A newly added mod starts with empty `configuration_options` (its defaults); use the in-game mod config menu, or edit `modoverrides.lua` by hand, to tune it afterwards — your changes will stick.
+
+Gem Core, IA Core and Island Adventures are structural dependencies of this 4-shard (Forest/Cave/Island/Volcano) setup, so they are always installed and enabled regardless of the `DST_MOD_IDS*` variables: Gem Core on every shard, and IA Core + Island Adventures on Island/Volcano only (they break worldgen if enabled on Master/Caves). The `DST_MOD_IDS*` variables only add extra mods on top of this, they never remove it.
 
 ### Stop server
 
@@ -84,7 +88,7 @@ A docker stop command, whether at the command line or in Dockge or Portainer wil
 
 To programmatically shut down the server, send a SIGINT to the `supervisord` process. 
 
-Note: the server may take up to ~5min to save map and fully shut down.
+Note: the server may take up to ~12min to save map and fully shut down.
  
 ## Server Configuration
 
